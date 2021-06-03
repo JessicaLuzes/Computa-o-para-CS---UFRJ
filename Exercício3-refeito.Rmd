@@ -1,0 +1,229 @@
+---
+title: "Exerc.4_Correto"
+author: "Jessica_Luzes"
+date: "6/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Corrigido na aula 6 - dia 14.05.2021
+
+INCORPORANDO
+A ANÁLISE DOS MISSING (NA’S) EM NOSSAS ANÁLISES
+
+A atividade do exercício desta semana retoma a mesma fonte de dados da semana passada e segue passos muito parecidos, mas com objetivos diferentes e incorporando alguns pontos importantes que vimos na aula passada, principalmente a análise e exclusão dos NAs. O foco explícito é identificar eliminar a presença dos NAs na base, algo sempre necessário.
+
+1. Vá no site do link abaixo, baixe os microdados mais recentes do Latinobarometro, extraia os  arquivos em sua pasta de preferência e importe os dados no R. Baixe também o  dicionário dos dados e o questionário. Fonte: https://www.latinobarometro.org/latContents.jsp
+
+2. Abra a base no R. Para este exercício você precisa dos pacotes tidyverse e rio instalados e carregados
+
+```{r}
+rm(list=ls())
+library(rio)
+library(tidyverse)
+library(janitor)
+library(readr)
+library(magrittr)
+library(dplyr)
+library(here)
+library(rio)
+library(readxl)
+library(haven)
+
+#Lookfor - procurar itens específicos:
+#lookfor(base, 'p34)
+#Leitura: Procure na base, tudo que houve p34...
+lookfor <- function(d,p) names(d)[grep(p,names(d))]
+```
+
+```{r}
+base <- import("Latinobarometro_2018_Esp_R_v20190303.rds")
+base<-data.frame(base)
+glimpse(base)
+## Abre tanto arquivos xls como xlsx
+```
+
+```{r}
+# Funções do Haven, que importou, vatagens
+print_labels(base$P15STGBSC.A)
+```
+
+```{r}
+print_labels(base$IDENPA)
+
+```
+
+```{r}
+as_factor(base$P15STGBSC.A)
+
+```
+
+
+3. Com o verbo "select" deixe apenas as seguintes variáveis em um objeto (do tipo data.frame): IDENPA, P34NI.BA, P34NI.BB, P34NI.BC, P34NI.BD, P34NI.BE, P34NI.BF
+
+```{r}
+latino <- base %>% 
+  select(IDENPA,"P34NI.BA", "P34NI.BB", "P34NI.BC", "P34NI.BD", "P34NI.BE", "P34NI.BF")
+```
+
+
+```{r}
+latino
+```
+
+
+4. Aplique o a função abaixo em seu objeto. Ela vai te informar se seu objeto contem ou não contem NAs
+
+NOMEDOSEUOBJETO %>%
+summarise_all(funs(sum(is.na(.))))
+
+```{r}
+latino%>%
+summarise_all(funs(sum(is.na(.))))
+```
+
+
+5. Com o verbo "rename" Renomeie as variáveis P34NI.BA, P34NI.BB, P34NI.BC, P34NI.BD, P34NI.E,  P34NI.BF
+
+ - Sugestão: substitua os nomes para item.a, item.b, item.c e assim por diante
+
+```{r}
+#Permite que as colunas que são as fontes da nossa infomração intacta...
+#Flávio não usa rename...
+#Boa prática para não perder as informações originais, e sim acrescentar novas colunas com mutações... Ou seja, evitar usar rename e usar mais o mutate...
+#Boa prática: mutate(item_a = P34NI.BA), na qual item_a é uma nova variável que vai conviver com o P34NI.BA (antiga variável)...
+#As variáveis originais seguirão no meu objeto...
+#Atenção : Fazer um por um é ineficiente...Existe formas mais eficientes... 
+#Como se lê, atribuir ao objeto latino ...
+
+latino<- latino %>% mutate(item_a = P34NI.BA)
+latino<- latino %>% mutate(item_b = P34NI.BB)
+latino<- latino %>% mutate(item_c = P34NI.BC)
+latino<- latino %>% mutate(item_d = P34NI.BD)
+latino<- latino %>% mutate(item_e = P34NI.BE)
+latino<- latino %>% mutate(item_f = P34NI.BF)
+
+```
+
+```{r}
+latino
+```
+
+
+6. Com o verbo "mutate" recodifique TODAS essas novas variáveis para o seguinte padrão:
+
+2=0, 1=1
+
+Dica: o commando abaixo vai recodificar todas as variáveis ao mesmo tempo (excluindo IDENPA)
+
+```{r}
+#Quem importou a base com números negativos, nessa fase aqui pode transformar tudo em missing...
+#recoficia os negativos, se houver, para NA...
+#Tudo que não foi especificado no case_when virá NA...
+
+latino <- latino %>%     
+mutate(across(-IDENPA, ~case_when(. == 1 ~ 1,
+                                       . == 2 ~ 0,
+                                        )))
+```
+
+
+```{r}
+#Forma mais prática sem ter que especificar um por um...
+
+latino1<-latino %>% mutate(across(item_a:item_f, ~case_when(. ==1~1,
+                                                          . == 2~0,  )))
+```
+
+```{r}
+glimpse(latino1)
+#Observa-se que a base só tem 0 e 1...
+```
+
+
+```{r}
+latino1%>%
+summarise_all(funs(sum(is.na(.))))
+```
+
+
+7. Verifique se a recodificação funcionou usando os comandos abaixo. Essas variávies não podem ter NAs
+
+```{r}
+latino1  %>%  tabyl(P34NI.BA, item_a)
+latino1 %>%  tabyl(P34NI.BB, item_b)
+latino1 %>%  tabyl(P34NI.BC, item_c)
+latino1 %>%  tabyl(P34NI.BD, item_d)
+latino1 %>%  tabyl(P34NI.BE, item_e)
+latino1 %>%  tabyl(P34NI.BF, item_f)
+
+```
+
+
+8. Agora vamos remover os NAs do objeto.
+
+
+```{r}
+latino1 %>% summarise_all(funs(sum(is.na(.))))   #checando se ainda tem NA
+
+```
+
+```{r}
+latino1<- na.omit(latino1) 
+
+```
+
+
+```{r}
+latino1 %>% summarise_all(funs(sum(is.na(.))))   #confirmando que NAs foram removidos
+
+```
+
+
+9. Com o verbo "mutate" crie uma variável que seja a soma das variáveis criadas nos passos anteriores. Esse será um índice de uso dos itens, quanto maior seu valor, mais os habitantes daquele país têm acesso ao item.
+
+```{r}
+latino <-latino %>% mutate(soma=item_a + item_b + item_c + item_d + item_e + item_f)
+```
+
+```{r}
+latino
+```
+
+
+```{r}
+#O professor utilizou a base original...
+latino %>% tabyl(soma)
+```
+
+
+10. Insira o código abaixo em seu script
+
+
+```{r}
+paises <- latino %>%   group_by(IDENPA) %>% summarise(media=mean(soma))
+```
+
+```{r}
+paises
+```
+
+10. O código acima apresenta uma média do índice de itens para os países a. Qual país tem maior presença média do índice de itens? E o menor? 222
+
+
+11. Usando o verbo "filter", crie um novo objeto a partir do objeto "países" que contenha apenas Brasil, Chile e Honduras/
+
+
+```{r}
+paises_final<-paises%>%
+    filter(IDENPA == 76 | IDENPA == 152 | IDENPA ==340)
+```
+
+
+```{r}
+paises_final
+```
+
