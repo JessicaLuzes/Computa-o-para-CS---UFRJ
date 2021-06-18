@@ -1,0 +1,180 @@
+#Aula7.refeita - Gravação dia 21.05
+
+#Extrair informações dos bancos de dados
+#Um tipo de coluna, um tipo de variável que tem uma qtt dentro dela...
+#Um tipo de variável mais típica em outras ciências...
+#A bilogia quantifica a a qtt de vírus, proteína...
+#Os números tem significados intrínsecos...
+#Na epidemiologia, importa a qtt de pessoas com cólera, covid...
+#Variáveis em que a qtt tem um significado...
+# O número tem um significado, a exemplo do peso... Tem uma unidade padronizada internacionalmente...
+# Não está olhando variáveis de texto...
+# Variáveis categóricas - não tem uma escala intríseca de mensuração...Por exemplo, o sexo dos indivíduo, feminino iguala 1, e masculino igual a 2.
+# Os números 1 ou 2 são opções arbitrárias de quem criou a base de dados, assim damos um rótulo para ele..
+# 
+
+library(tidyverse)
+library(janitor)
+
+#Carregando os dados da aula
+data(mpg)
+class(mpg)
+
+#1. Retomar níveis de mensuração
+#2. Apresentar fórmula da média
+#3. Apresentar cálculo da média em excel
+#4. Apresentar resultados da média no R
+#5. Apresentar lógica da mediana
+#6. Comparar média e mediana
+#7. Medidas de posição
+#8. Desvio padrão
+
+library(rio)
+
+
+
+?rio
+
+#1. Calculando uma média. Comparando gastos na cidade e na estrada
+mpg %>% summarise(sum(cty)) #consumo na cidade
+#
+
+
+sum(with(mpg, !is.na(cty)))
+3945/234
+mpg %>% summarise(mean(cty)) #consumo na cidade
+ggplot(mpg, aes(x=cty)) + 
+      geom_histogram() +
+      geom_vline(aes(xintercept = mean(cty)),col='red',size=5)
+#Quando os valores são muito fracionados, o Rstudio agrupa certos valores
+#Largura - bins - números de classses
+#bins - 5 valores únicos
+#Entre valores
+#
+
+ggplot(mpg, aes(x=cty)) + 
+  geom_histogram(bins= 5) +
+  geom_vline(aes(xintercept = mean(cty)),col='red',size=1)
+
+mpg %>% summarise(sum(hwy)) #consumo na cidade
+sum(with(mpg, !is.na(hwy)))
+5485/234
+mpg %>% summarise(mean(hwy)) #consumo na cidade
+ggplot(mpg, aes(x=hwy)) + 
+      geom_histogram() +
+      geom_vline(aes(xintercept = mean(hwy)),col='red',size=1)
+#
+mpg %>% summarise(mean(cty)) 
+mpg %>% summarise(median(cty))
+
+#2. Comparando média e mediana. Comparando as cilindradas dos veículos
+mpg %>% summarise(mean(displ)) 
+mpg %>% summarise(median(displ))
+
+ggplot(mpg, aes(x=displ)) + 
+      geom_histogram(bins=200) +
+      geom_vline(aes(xintercept = mean(cty)),col='red',size=1) +
+      geom_vline(aes(xintercept = median(cty)),col='blue',size=1) 
+      
+ggplot(mpg, aes(x=hwy)) + 
+      geom_histogram(bins=200) +
+      geom_vline(aes(xintercept = mean(hwy)),col='red',size=1) +
+      geom_vline(aes(xintercept = median(hwy)),col='blue',size=1) 
+
+#3. Generalizando medidas de posição (quartis, decis, etc)
+mpg$displ %>% quantile(., na.rm = T, probs = c(0, 0.25, 0.5, 0.75, 1))
+mpg$displ %>% quantile(., na.rm=T, probs = seq(0, 1, 1/4))
+
+#Criou três colunas:
+mpg <- mpg %>%
+      mutate(q1 = quantile(hwy, 0.25),
+             q2 = quantile(hwy, 0.50),
+             q3 = quantile(hwy, 0.75))
+mpg %>% tabyl (q1)
+
+q1 = mediana
+q2 = tercil 
+q3 = quartil
+
+ggplot(mpg, aes(x=hwy)) + 
+      geom_histogram() +
+      geom_vline(aes(xintercept = mean(hwy)),col='red',size=1) +
+      geom_vline(aes(xintercept = q1)) +
+      geom_vline(aes(xintercept = q2)) +
+      geom_vline(aes(xintercept = q3))
+
+ggplot(mpg, aes(x=displ)) + 
+      geom_density() +
+      geom_vline(aes(xintercept = mean(displ)),col='red',size=1) +
+      geom_vline(aes(xintercept = q1)) +
+      geom_vline(aes(xintercept = q2)) +
+      geom_vline(aes(xintercept = q3))
+
+#4. Amplitude e medidas de posição
+#Ao invés de eividir em dois, vai dividir em 4...
+mpg %>% 
+      summarise(rng = range(displ))
+mpg %>% select(cty, hwy, displ) %>% summary()
+#Quantile - não funciona bem dentro do tydiverse
+#mpg$displ - Quero ir na coluna tal do objeto tal...
+#Remover os NAs - na.rm=T
+mpg$hwy %>% quantile(., na.rm=T, probs = seq(0, 1, 1/4))
+mpg$hwy %>% 
+      summarise(x = quantile(displ, c(0.25, 0.5, 0.75)), q = c(0.25, 0.5, 0.75))
+mpg %>% 
+      group_by(manufacturer) %>% 
+      summarise(x = quantile(displ, c(0.25, 0.5, 0.75)), q = c(0.25, 0.5, 0.75))
+
+ggplot(data = mpg, aes(x = "", y = displ)) + 
+      geom_boxplot() +
+      coord_cartesian(ylim = c(0, 8)) # I set the y axis scale so the plot looks better.
+
+ggplot(data = mpg, aes(x = manufacturer, y = hwy)) + 
+      geom_boxplot() +
+      coord_cartesian(ylim = c(0, 44)) # I set the y axis scale so the plot looks better.
+
+#5. Desvio padrão
+#Função do Rbase de desvio padrão:
+#sd é uma função de summarise...
+#O desvio padrão dos consumos desses carros na cidade é 4.25 (razão de KM/l)...
+mpg %>% sd(cty)
+#Mostra o desvio padrão por carro...Qto maior o númer mais dispersa é a distribuição...
+#Toyota e volkswagen tem grandes dispersões...
+#Dispersão é uma medida de heterogeneidade... Qto maior o desvio padrão, maior a dispersão ou a heterogeneidade...
+#O rstudio sempre usa a equação amostral e não populacional
+
+mpg %>% group_by(manufacturer) %>% summarise(sd=sd(cty))
+
+mpg <- mpg %>% mutate(mean_cty=mean(cty))
+mpg <- mpg %>% mutate(passo1=cty-mean_cty)
+mpg <- mpg %>% mutate(passo2=passo1^2)
+mpg <- mpg %>% mutate(passo3=sum(passo2))
+mpg <- mpg %>% mutate(passo4=passo3/n())
+mpg <- mpg %>% mutate(dp = sqrt(passo4))
+
+mpg %>% tabyl (dp)
+
+mpg %>% group_by(manufacturer) %>% summarise(sd=sd(displ))
+
+mpg %>% filter(manufacturer=="audi") %>%
+      ggplot(aes(x=cty)) + 
+      geom_histogram() +
+      geom_vline(aes(xintercept = mean(cty)),col='red',size=1) +
+      geom_vline(aes(xintercept = median(cty)),col='blue',size=1) 
+
+mpg %>% filter(manufacturer=="volkswagen") %>%
+      ggplot(aes(x=cty)) + 
+            geom_histogram() +
+            geom_vline(aes(xintercept = mean(cty)),col='red',size=1) +
+            geom_vline(aes(xintercept = median(cty)),col='blue',size=1) 
+      
+#Juntando tudo
+mpg %>%
+      summarise(
+            n = n(),
+            mean = mean(cty), 
+            sd = sd(cty))
+
+mpg <- mpg %>% mutate(media_cty=mean(cty))
+
+export(mpg, "mpg.csv")
