@@ -1,0 +1,156 @@
+#Exercício 6 - 26/05/2021
+
+rm(list=ls())
+
+library(tidyverse)
+library(rio)
+library(here)
+library(janitor)
+library(arsenal)
+library(ggplot2)
+library(modelsummary)
+
+
+?modelsummary
+
+##########################################PARTE 1
+##########################################JUNTANDO BASES DE DADOS
+c2002 <- import(here("2002.Cursos.dta"))
+c2017 <- import(here("2017.Cursos.dta"))
+
+#0. Check mesmas variáveis
+glimpse(c2002)
+glimpse(c2017)
+
+#Os dados desta semana são provenientes do Censo do Ensino Superior. 
+#As linhas são cursos, as colunas qualificam esses cursos (se são públicos ou privados, quantidade de matrículas).
+#1. Importe os dados em dois objetos diferentes. Leia as instruçoóes abaixo, veja as variáveis que vamos utilizar. Analise a necessidade ou náo de eliminar NAs.
+
+#2. Utilizando medidas de tendëncia central e fazendo análises visuais com os recursos de gráficos ensinados na aula passada analise a distribuição de matrículas de cada objeto. Responda: 
+  ##a. A distribuição das matrículas é simétrica ou assimétrica?
+#Simétrico?
+
+# Em ambos, a distribuição é altamente assimétrica, ou seja, tem muito cursos com valores baixos de matrículas!
+# Resposta:Há assimetria em ambos os períodos
+# Para haver simetria basta o afastamento da média e da mediana, 
+# mas também a concentração dos valores é relevante, pois vemos que existem poucos valores muito altos!
+# Ocorre assim, uma direção de assimetria que contamina a média...
+
+  ggplot(c2002, aes(x=matriculados)) +
+  geom_histogram(bins=200) +
+  geom_vline(aes(xintercept = mean (matriculados)), col = 'red', size= 1) +
+  geom_vline(aes(xintercept = median(matriculados)), col= 'blue', size = 1)
+
+  c2017<- c2017 %>% drop_na()
+  ggplot(c2017, aes(x=matriculados)) +
+    geom_histogram(bins=100) +
+    geom_vline(aes(xintercept = mean (matriculados)), col = 'red', size= 1) +
+    geom_vline(aes(xintercept = median(matriculados)), col= 'blue', size = 1)
+  
+#colnames(c2002)
+
+  ##b. Compare as distribuições da rede privada e pública em cada objeto. 
+  ##A variável se chama "rede" (1=pública, 2=Privada, 3=NA). 
+  ##Antes de responder, recodifique a variáveil para uma nova variável que registre o 3 coo NA. 
+  ##Qual rede é mais assimétrica?
+ #Mudu as variáveis na tabela...
+  
+  c2002 <- c2002 %>%
+    mutate (rede_f=case_when(rede ==1 ~"Pública",
+                             rede ==2 ~"Privada"))
+  
+  c2017 <- c2017 %>%
+    mutate (rede_f=case_when(rede ==1 ~"Pública",
+                             rede ==2 ~"Privada"))
+  
+datasummary(rede_f*matriculados ~ Mean + median, data = c2017)
+#Obs: matriculados é variado...
+
+c2017 %>% drop_na() %>%
+  ggplot (aes(x= rede_f, y= matriculados)) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(0, 1000))
+
+   ##3. Utilizando medidas de dispersão, 
+    ##compare os objetos e informe se o sistema de ensino superior ficou mais ou
+     ##menos heterogëneo. 
+
+##Para esta resposta bastava pedir o summarise de cada objeto...
+##E mostrar se o desvio padrão diminuiu entre os anos, 
+##então o sistema está mais homogêneo, ao contrário doque esperávamos...
+## Nas linhas estão os cursos...
+
+c2002 %>% summarise (sd=sd(matriculados))
+c2017 %>% summarise (sd=sd(matriculados))
+
+## Resposta: Tem menos variação no sistema de cursos...
+##(...)tem menos variação do sistema de cursos nos dois perídodos...
+## Heterogêno - Variação dos tipos de cursos, pois ao longo dos anos surgiram novos cursos...
+###(...) Mas a avaliação por este tipo de heterogeneidade, indica que os alunos entenderam que o indicador,
+###(...)a variável é diferente da proposta pelo professor...
+###A pergunta correta seria: Os cursos ficaram heterogênos ou homogêneos em ternos de tamanho?
+###Alguns alunos responderam diferente porque entenderam com relação à qtt de cursos...
+##Observação sobre desvio padrão:
+##Desvio médio: Desvio padrão de cada observação em relação à média...Se ficar maior ou menor,
+##(...) isso converge ou se afasta da média...É por isso que o professor insiste com as fórmulas, 
+## pois as fórmulas dão a intuição...
+
+#4. Crie uma medida de quantil de sua escolha nos objetos, 
+#(...) tercis, quartis, quintis, vintis ou centis.
+
+c2002$matriculados %>% quantile(., na.rm=T, probs= seq(0, 1, 1/4))
+colnames(c2002)
+
+c2002 <- c2002 %>%
+  mutate (quartil = case_when(matriculados >=0 & matriculados <= 60~1,
+                              matriculados >60 & matriculados <= 151~2,
+                              matriculados >151 & matriculados <= 296~3,
+                              matriculados >296 & matriculados <= 5954~4))
+glimpse(c2002)
+
+c2017$matriculados %>% quantile(., na.rm=T, probs= seq(0, 1, 1/4))
+c2017 <- c2017 %>%
+  mutate (quartil = case_when(matriculados >=0 & matriculados <= 54~1,
+                              matriculados >54 & matriculados <= 124~2,
+                              matriculados >124 & matriculados <= 245~3,
+                              matriculados >245 & matriculados <= 9675~4))
+
+glimpse(c2017)
+
+c2002$matriculados %>% quantile(., na.rm=T, probs= seq(0, 1, 1/4))
+c2017$matriculados %>% quantile(., na.rm=T, probs= seq(0, 1, 1/4))
+
+
+  ##a. Crie um novo objeto a partir de cada ano que tenha uma nova coluna que 
+  ##(...)seja o quartil e outra que contenha a SOMA da  quantidade de matrículas dentro
+  ##(...)do quantil escolhido. Este objeto deve ter a quantidade de linhas igual à medida 
+  ##(...)de quantil que vocë escolheu;
+
+###Primeiro passo: Criar um novo objeto agrupando os quartis...
+ c2002_aggr<- c2002 %>% group_by(quartil) %>%
+   summarise (soma_2002 = sum(matriculados))
+
+c2017 %>% tabyl(quartil)
+## Quartil que na verdade é quarto;
+## Qde aproximada de 25 % de cada curso...
+
+
+##b. Gere uma nova coluna que contenha o total de matrículas do ano
+
+Falta terminar
+##c. Divida a coluna de matrículas por quartil pela coluna do total de matrículas. O que esse número significa na sua opiniáo? Comparando esses números ao longo do tempo, o que vocë infere sobre o sistema de ensino superior brasileiroå?
+Falta terminar
+  
+  ##DICA: o código abaixo vai lhe ajudar criar um novo objeto que tem nas linhas os quartis e nas colunas as somas de matrículas dentro de cada medida de quantil
+
+
+NOVOOBJETO<- OBJETO2002 %>%
+  group_by(VARIÁVEL DE QUANTIL) %>%
+  summarise(sum(matriculados))
+
+2017.Cursos.dta
+Arquivo binário
+
+2002.Cursos.dta
+Arquivo binário
+Ver atividade
